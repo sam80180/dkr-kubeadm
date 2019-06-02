@@ -15,39 +15,35 @@
 #
 #  - run with --privileged
 #
-#      $ docker run -d --privileged maru/kubeadm
+#      $ docker run -d --privileged maru/kubeadm:ubuntu18.04
 #
 
-FROM maru/systemd-dind
+FROM sam80180/systemd-dind:ubuntu18.04
 
-ADD k8s.repo /etc/yum.repos.d/
+# https://tachingchen.com/tw/blog/kubernetes-installation-with-kubeadm/
+RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
+	echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" >> /etc/apt/sources.list.d/kubernetes.list
 
-RUN dnf -y update && dnf -y install\
- kubeadm\
- kubelet\
- kubectl\
- kubernetes-cni\
- bind-utils\
- bridge-utils\
- ebtables\
- findutils\
- hostname\
- htop\
- iproute\
- iputils\
- less\
- net-tools\
- procps-ng\
- tcpdump\
- traceroute\
- which\
- && dnf clean all
+RUN apt-get update; apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+#RUN apt-get install -y bind-utils\
+#	bridge-utils\
+#	ebtables\
+#	findutils\
+#	hostname\
+#	htop\
+#	iproute\
+#	iputils\
+#	net-tools\
+#	tcpdump\
+#	traceroute
 
 RUN systemctl enable kubelet
 
 # kubeadm requires /etc/kubernetes to be empty
-RUN rmdir /etc/kubernetes/manifests
+RUN rmdir /etc/kubernetes/manifests ; yes | kubeadm reset
 
 # Docker requires /run have shared propagation in order to start the
 # kube-proxy container.
 RUN echo 'mount --make-shared /run' >> /usr/local/bin/dind-setup.sh
+
+RUN swapoff -a
